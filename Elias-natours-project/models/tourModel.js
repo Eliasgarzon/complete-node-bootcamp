@@ -138,6 +138,10 @@ tourSchema.pre("save", function (next) {
 //   next();
 // });
 
+// tourSchema.index({ price: 1 });
+// tourSchema.index({ price: 1, ratingsAverage: -1 });
+// tourSchema.index({ slug: 1 });
+
 //QUERY MIDDLEWARE
 tourSchema.pre(/^find/, function (next) {
   this.find({ secretTour: { $ne: true } });
