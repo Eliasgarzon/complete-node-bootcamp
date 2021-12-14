@@ -32,6 +32,8 @@ const reviewSchema = new mongoose.Schema(
   }
 );
 
+reviewSchema.index({ tour: 1, user: 1 }, { unique: true });
+
 reviewSchema.pre(/^find/, function (next) {
   //NO NEED for populating tour info on each review!!!
   //   this.populate({
@@ -64,10 +66,17 @@ reviewSchema.statics.calcAverageRatings = async function (tourId) {
 
   console.log(stats);
 
-  await Tour.findByIdAndUpdate(tourId, {
-    ratingsQuantity: stats[0].nRatings,
-    ratingsAverage: stats[0].avgRating,
-  });
+  if (stats.lenght > 0) {
+    await Tour.findByIdAndUpdate(tourId, {
+      ratingsQuantity: stats[0].nRatings,
+      ratingsAverage: stats[0].avgRating,
+    });
+  } else {
+    await Tour.findByIdAndUpdate(tourId, {
+      ratingsQuantity: 0,
+      ratingsAverage: 4.5,
+    });
+  }
 };
 
 reviewSchema.post("save", function () {
@@ -75,6 +84,19 @@ reviewSchema.post("save", function () {
 
   //this.constructor to reffer to the model Review
   this.constructor.calcAverageRatings(this.tour);
+});
+//reviews are edited and deleted with findbyidadupdate and findbyidanddelete
+//These are QUERY so no access to the doc but to the query (do workaround)
+reviewSchema.pre(/^findOneAnd/, async function (next) {
+  this.review = await this.findOne();
+  next();
+});
+
+//PASS tour id from PRE to POST MW
+
+reviewSchema.post(/^findOneAnd/, async function () {
+  //await this.findOne() does not work beause the query was executed already
+  await this.review.constructor.calcAverageRatings(this.review.tour);
 });
 
 const Review = mongoose.model("Review", reviewSchema);
